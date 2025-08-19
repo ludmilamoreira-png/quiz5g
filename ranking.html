@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ranking 🏆 Quiz 5G</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 2rem auto;
+      padding: 2rem;
+      background: #fff;
+      border-radius: 1rem;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+      text-align: center;
+    }
+    h1 {
+      margin-bottom: 0.5rem;
+      font-weight: 800;
+      font-size: 2rem;
+    }
+    .sub {
+      color: #6b7280;
+      margin-bottom: 2rem;
+    }
+    ol {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.8rem 1rem;
+      margin-bottom: 0.5rem;
+      border-radius: 0.5rem;
+      background: #f9fafb;
+      font-weight: 600;
+    }
+    li:nth-child(1) {
+      background: #fde68a;
+    }
+    li:nth-child(2) {
+      background: #e0f2fe;
+    }
+    li:nth-child(3) {
+      background: #dcfce7;
+    }
+    .username {
+      text-align: left;
+    }
+    .score {
+      font-weight: 700;
+    }
+    .btn {
+      display: inline-block;
+      margin-top: 2rem;
+      padding: 0.8rem 1.2rem;
+      border-radius: 0.75rem;
+      font-weight: 600;
+      background: #3b82f6;
+      color: #fff;
+      text-decoration: none;
+      transition: background 0.3s;
+    }
+    .btn:hover {
+      background: #2563eb;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🏆 Ranking</h1>
+    <div class="sub">Top 10 jogadores do Quiz 5G</div>
+    <ol id="ranking-list">
+      <li>Carregando...</li>
+    </ol>
+    <a href="./index.html" class="btn">Jogar novamente</a>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./supabase-config.js"></script>
+  <script>
+    const db = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+
+    async function loadRanking() {
+      const { data, error } = await db
+        .from('ranking')
+        .select('*')
+        .order('score', { ascending: false })
+        .limit(10);
+
+      const list = document.getElementById('ranking-list');
+      list.innerHTML = '';
+
+      if (error) {
+        console.error("Supabase error:", error);
+        list.innerHTML = `<li>Erro ao carregar ranking: ${error.message}</li>`;
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        list.innerHTML = `<li>Nenhum jogador ainda!</li>`;
+        return;
+      }
+
+      data.forEach((row, idx) => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <span class="username">${idx+1}. ${row.username}</span>
+          <span class="score">${row.score} pts</span>
+        `;
+        list.appendChild(li);
+      });
+    }
+
+    loadRanking();
+  </script>
+</body>
+</html>

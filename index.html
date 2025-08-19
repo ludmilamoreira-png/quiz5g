@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quiz 5G — Início</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+  <style>
+    /* Spinner do botão */
+    .spinner {
+      border: 3px solid #fff;
+      border-top: 3px solid transparent;
+      border-radius: 50%;
+      width: 16px;
+      height: 16px;
+      display: inline-block;
+      margin-right: 8px;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body class="index">
+  <div class="container">
+    <header>
+      <div class="brand">
+        <h1>
+          <!-- Ícone minimalista de ondas 5G -->
+          <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M3 12a9 9 0 0 1 18 0h-2a7 7 0 1 0-14 0H3Zm3 0a6 6 0 0 1 12 0h-2a4 4 0 1 0-8 0H6Zm3 0a3 3 0 0 1 6 0h-6Z"/>
+          </svg>
+          Quiz 5G
+        </h1>
+        <span class="badge">Desenvolvido por Ludmila Moreira</span>
+      </div>
+    </header>
+
+    <main>
+      <div class="card">
+        <label class="label" for="username">Nome do jogador</label>
+        <input id="username" class="input" maxlength="20" placeholder="Ex.: Ludmila">
+        <div class="footer">
+          <a class="link" href="./ranking.html">Ver Ranking</a>
+          <button class="btn primary" id="start">Começar</button>
+        </div>
+        <p class="small">Dica: pressione <kbd>Enter</kbd> para começar</p>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const input = document.getElementById('username');
+    const start = document.getElementById('start');
+    input.focus();
+
+    function go() {
+      const name = (input.value || '').trim();
+      if (name.length < 3) {
+        alert('Digite um nome com pelo menos 3 caracteres.');
+        return;
+      }
+
+      // Estado de carregamento no botão
+      start.disabled = true;
+      start.innerHTML = '<span class="spinner"></span> Carregando...';
+
+      localStorage.setItem('playerName', name);
+
+      // Redireciona depois de 1.5s
+      setTimeout(() => {
+        window.location.href = './quiz.html';
+      }, 1500);
+    }
+
+    start.addEventListener('click', go);
+    input.addEventListener('keydown', (e)=>{ if(e.key==='Enter') go(); });
+  </script>
+</body>
+</html>
