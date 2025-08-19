@@ -1,51 +1,157 @@
-async function endGame(){
-  try {
-    // 1. Verifica se já existe o jogador no ranking
-    const { data: existing, error: fetchError } = await db
-      .from('ranking')
-      .select('id, score')
-      .eq('username', name)
-      .maybeSingle();
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quiz 5G — Jogo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <h1>Perguntas</h1>
+        <span class="badge" id="player-badge"></span>
+      </div>
+      <div class="sub" id="progress-label">Pergunta 1</div>
+    </header>
 
-    if (fetchError) {
-      console.error('Erro ao buscar jogador:', fetchError);
-    } else if (existing) {
-      // 2. Se já existe e a nova pontuação for maior → atualiza
-      if (score > existing.score) {
-        const { error: updateError } = await db
-          .from('ranking')
-          .update({ score })
-          .eq('id', existing.id);
-
-        if (updateError) console.error('Erro ao atualizar pontuação:', updateError);
-      }
-    } else {
-      // 3. Se não existe, insere novo
-      const { error: insertError } = await db
-        .from('ranking')
-        .insert([{ username: name, score }]);
-
-      if (insertError) console.error('Erro ao inserir pontuação:', insertError);
-    }
-  } catch (e) {
-    console.error('Falha ao conectar no Supabase', e);
-  }
-
-  // Mostra resultado e chama ranking
-  document.body.innerHTML = `
-    <div class="container">
-      <header>
-        <div class="brand"><h1>Resultado 🎉</h1></div>
-        <div class="sub">Obrigado por jogar, ${name}!</div>
-      </header>
-      <div class="card row center">
-        <div style="font-size:2.2rem; font-weight:800">Você fez ${score} / ${total}</div>
-        <div class="small">Sua pontuação foi salva no ranking.</div>
-        <div class="grid-2">
-          <a class="btn warn" href="./index.html">Jogar novamente</a>
-          <a class="btn success" href="./ranking.html">Ver Ranking 🏆</a>
-        </div>
+    <div class="card row">
+      <div class="progress"><div id="bar"></div></div>
+      <div id="question" style="font-size:1.25rem; font-weight:700; margin-top:6px">...</div>
+      <div id="options" class="grid-2"></div>
+      <div class="footer">
+        <div class="small" id="status">Pontos: <strong id="points">0</strong></div>
+        <button class="btn success" id="next" disabled>Próxima</button>
       </div>
     </div>
-  `;
-}
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./supabase-config.js"></script>
+  <script src="./questions.js"></script>
+  <script>
+    // Estado inicial
+    const name = localStorage.getItem('playerName');
+    if (!name) { window.location.href = './index.html'; }
+    document.getElementById('player-badge').textContent = `Jogador: ${name}`;
+
+    const db = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+
+    let i = 0;
+    let score = 0;
+    let total = window.QUESTIONS.length;
+
+    // 🔹 embaralha ordem das perguntas
+    window.QUESTIONS = window.QUESTIONS
+      .map(q => ({...q, sort: Math.random()}))
+      .sort((a,b)=> a.sort - b.sort)
+      .map(({sort, ...rest}) => rest);
+
+    const bar = document.getElementById('bar');
+    const qEl = document.getElementById('question');
+    const optsEl = document.getElementById('options');
+    const nextBtn = document.getElementById('next');
+    const pointsEl = document.getElementById('points');
+    const progressLabel = document.getElementById('progress-label');
+
+    function render() {
+      const q = window.QUESTIONS[i];
+      progressLabel.textContent = `Pergunta ${i+1} de ${total}`;
+      bar.style.width = `${((i)/total)*100}%`;
+      qEl.textContent = q.q;
+      nextBtn.disabled = true;
+      optsEl.innerHTML = '';
+
+      // 🔹 embaralha alternativas
+      const options = q.options.map((text, idx) => ({
+        text,
+        isCorrect: idx === q.a
+      }));
+      const shuffled = options.sort(() => Math.random() - 0.5);
+
+      shuffled.forEach((opt, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'option';
+        btn.innerHTML = `<span style="opacity:.7">${String.fromCharCode(65+idx)}.</span> ${opt.text}`;
+        btn.onclick = () => check(opt.isCorrect, btn);
+        optsEl.appendChild(btn);
+      });
+    }
+
+    function check(isCorrect, btn) {
+      const buttons = [...document.querySelectorAll('.option')];
+      buttons.forEach(b => b.disabled = true);
+
+      if (isCorrect) {
+        btn.classList.add('correct');
+        score += 1;
+        pointsEl.textContent = score;
+      } else {
+        btn.classList.add('wrong');
+        // marca a correta
+        const correctBtn = buttons.find(b => b.onclick.toString().includes("true"));
+        if (correctBtn) correctBtn.classList.add('correct');
+      }
+
+      nextBtn.disabled = false;
+      bar.style.width = `${((i+1)/total)*100}%`;
+    }
+
+    nextBtn.addEventListener('click', async () => {
+      i++;
+      if (i < total) {
+        render();
+      } else {
+        await endGame();
+      }
+    });
+
+    async function endGame() {
+      // 🔹 salva ou atualiza score no Supabase
+      try {
+        const { data: existing } = await db
+          .from('ranking')
+          .select('*')
+          .eq('username', name)
+          .single();
+
+        if (existing) {
+          if (score > existing.score) {
+            await db.from('ranking')
+              .update({ score })
+              .eq('username', name);
+          }
+        } else {
+          await db.from('ranking').insert([{ username: name, score }]);
+        }
+      } catch (e) {
+        console.error('Erro ao salvar score:', e);
+      }
+
+      // 🔹 mostra tela de resultado
+      document.body.innerHTML = `
+        <div class="container">
+          <header>
+            <div class="brand"><h1>Resultado</h1></div>
+            <div class="sub">Obrigado por jogar, ${name}!</div>
+          </header>
+          <div class="card row center">
+            <div style="font-size:2.2rem; font-weight:800">Você fez ${score} / ${total}</div>
+            <div class="small">Sua pontuação foi salva no ranking.</div>
+            <div class="grid-2">
+              <a class="btn warn" href="./index.html">Jogar novamente</a>
+              <a class="btn success" href="./ranking.html">Ver Ranking</a>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    render();
+  </script>
+</body>
+</html>
