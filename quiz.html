@@ -110,48 +110,60 @@
       }
     });
 
-    async function endGame() {
-      // 🔹 salva ou atualiza score no Supabase
+       async function endGame(){
       try {
-        const { data: existing } = await db
+        // Busca pontuação anterior do jogador
+        const { data: existing, error: fetchError } = await db
           .from('ranking')
-          .select('*')
+          .select('score')
           .eq('username', name)
           .single();
 
-        if (existing) {
-          if (score > existing.score) {
-            await db.from('ranking')
-              .update({ score })
-              .eq('username', name);
-          }
-        } else {
-          await db.from('ranking').insert([{ username: name, score }]);
+        if (fetchError && fetchError.code !== 'PGRST116') {
+          console.error('Erro ao buscar pontuação:', fetchError);
         }
+
+        let shouldUpdate = true;
+
+        if (existing) {
+          // Só atualiza se for maior que a anterior
+          if (score > existing.score) {
+            shouldUpdate = true;
+          } else {
+            shouldUpdate = false;
+          }
+        }
+
+        if (shouldUpdate) {
+          const { error: upsertError } = await db
+            .from('ranking')
+            .upsert(
+              { username: name, score },
+              { onConflict: 'username' }
+            );
+
+          if (upsertError) console.error('Erro ao salvar pontuação:', upsertError);
+        }
+
       } catch (e) {
-        console.error('Erro ao salvar score:', e);
+        console.error('Falha ao conectar no Supabase', e);
       }
 
-      // 🔹 mostra tela de resultado
+      // Mostra resultado
       document.body.innerHTML = `
         <div class="container">
           <header>
-            <div class="brand"><h1>Resultado</h1></div>
+            <div class="brand"><h1>Resultado 🎉</h1></div>
             <div class="sub">Obrigado por jogar, ${name}!</div>
           </header>
           <div class="card row center">
             <div style="font-size:2.2rem; font-weight:800">Você fez ${score} / ${total}</div>
-            <div class="small">Sua pontuação foi salva no ranking.</div>
+            <div class="small">Sua pontuação foi salva no ranking${existing && score <= existing.score ? " (sua pontuação anterior era maior, então mantivemos ela)." : "."}</div>
             <div class="grid-2">
               <a class="btn warn" href="./index.html">Jogar novamente</a>
-              <a class="btn success" href="./ranking.html">Ver Ranking</a>
+              <a class="btn success" href="./ranking.html">Ver Ranking 🏆</a>
             </div>
           </div>
         </div>
       `;
     }
-
-    render();
-  </script>
-</body>
-</html>
