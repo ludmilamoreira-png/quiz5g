@@ -36,7 +36,7 @@
   <script>
     // Estado inicial
     const name = localStorage.getItem('playerName');
-    if (!name) { window.location.href = './index.html'; }
+    if(!name){ window.location.href = './index.html'; }
     document.getElementById('player-badge').textContent = `Jogador: ${name}`;
 
     const db = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
@@ -45,7 +45,7 @@
     let score = 0;
     let total = window.QUESTIONS.length;
 
-    // 🔹 embaralha ordem das perguntas
+    // 🔹 embaralha a ordem das perguntas
     window.QUESTIONS = window.QUESTIONS
       .map(q => ({...q, sort: Math.random()}))
       .sort((a,b)=> a.sort - b.sort)
@@ -66,7 +66,7 @@
       nextBtn.disabled = true;
       optsEl.innerHTML = '';
 
-      // 🔹 embaralha alternativas
+      // 🔹 gera opções embaralhadas mantendo referência da correta
       const options = q.options.map((text, idx) => ({
         text,
         isCorrect: idx === q.a
@@ -93,8 +93,7 @@
       } else {
         btn.classList.add('wrong');
         // marca a correta
-        const correctBtn = buttons.find(b => b.onclick.toString().includes("true"));
-        if (correctBtn) correctBtn.classList.add('correct');
+        buttons.find(b => b.onclick.toString().includes("true"))?.classList.add('correct');
       }
 
       nextBtn.disabled = false;
@@ -110,46 +109,22 @@
       }
     });
 
-       async function endGame(){
+    async function endGame(){
+      // 🔹 Salva ou atualiza no Supabase
       try {
-        // Busca pontuação anterior do jogador
-        const { data: existing, error: fetchError } = await db
+        const { data, error } = await db
           .from('ranking')
-          .select('score')
-          .eq('username', name)
-          .single();
+          .upsert(
+            { username: name, score },
+            { onConflict: 'username' } // garante que atualiza caso já exista
+          );
 
-        if (fetchError && fetchError.code !== 'PGRST116') {
-          console.error('Erro ao buscar pontuação:', fetchError);
-        }
-
-        let shouldUpdate = true;
-
-        if (existing) {
-          // Só atualiza se for maior que a anterior
-          if (score > existing.score) {
-            shouldUpdate = true;
-          } else {
-            shouldUpdate = false;
-          }
-        }
-
-        if (shouldUpdate) {
-          const { error: upsertError } = await db
-            .from('ranking')
-            .upsert(
-              { username: name, score },
-              { onConflict: 'username' }
-            );
-
-          if (upsertError) console.error('Erro ao salvar pontuação:', upsertError);
-        }
-
+        if (error) console.error('Erro ao salvar pontuação:', error);
       } catch (e) {
         console.error('Falha ao conectar no Supabase', e);
       }
 
-      // Mostra resultado
+      // Mostra resultado e chama ranking
       document.body.innerHTML = `
         <div class="container">
           <header>
@@ -158,7 +133,7 @@
           </header>
           <div class="card row center">
             <div style="font-size:2.2rem; font-weight:800">Você fez ${score} / ${total}</div>
-            <div class="small">Sua pontuação foi salva no ranking${existing && score <= existing.score ? " (sua pontuação anterior era maior, então mantivemos ela)." : "."}</div>
+            <div class="small">Sua pontuação foi salva no ranking.</div>
             <div class="grid-2">
               <a class="btn warn" href="./index.html">Jogar novamente</a>
               <a class="btn success" href="./ranking.html">Ver Ranking 🏆</a>
@@ -167,3 +142,8 @@
         </div>
       `;
     }
+
+    render();
+  </script>
+</body>
+</html>
