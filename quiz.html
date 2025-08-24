@@ -9,11 +9,29 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css">
   <style>
-    .correct { background: #4caf50; color: #fff; }
-    .wrong { background: #e53935; color: #fff; }
-    #answer-feedback { margin-top: 10px; font-size: 0.95rem; font-weight: 600; }
-    #answer-feedback.correct { color: #4caf50; }
-    #answer-feedback.wrong { color: #e53935; }
+    .correct { background: #4caf50 !important; color: #fff; }
+    .wrong { background: #e53935 !important; color: #fff; }
+
+    #answer-feedback {
+      margin-top: 15px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      display: none;
+    }
+    #answer-feedback.correct {
+      display: block;
+      background: #e8f5e9;
+      color: #2e7d32;
+      border: 2px solid #4caf50;
+    }
+    #answer-feedback.wrong {
+      display: block;
+      background: #ffebee;
+      color: #c62828;
+      border: 2px solid #e53935;
+    }
   </style>
 </head>
 <body>
@@ -42,7 +60,6 @@
   <script src="./supabase-config.js"></script>
   <script src="./questions.js"></script>
   <script>
-    // Estado inicial
     const name = localStorage.getItem('playerName');
     if(!name){ window.location.href = './index.html'; }
     document.getElementById('player-badge').textContent = `Jogador: ${name}`;
@@ -53,7 +70,6 @@
     let score = 0;
     let total = window.QUESTIONS.length;
 
-    // 🔹 embaralha a ordem das perguntas
     window.QUESTIONS = window.QUESTIONS
       .map(q => ({...q, sort: Math.random()}))
       .sort((a,b)=> a.sort - b.sort)
@@ -77,7 +93,6 @@
       feedbackEl.textContent = '';
       feedbackEl.className = '';
 
-      // 🔹 gera opções embaralhadas mantendo referência da correta
       const options = q.options.map((text, idx) => ({
         text,
         isCorrect: idx === q.a
@@ -101,17 +116,15 @@
         btn.classList.add('correct');
         score += 1;
         pointsEl.textContent = score;
-        feedbackEl.textContent = "Resposta correta!";
+        feedbackEl.textContent = "✅ Resposta correta!";
         feedbackEl.className = "correct";
       } else {
         btn.classList.add('wrong');
-
-        // 🔹 marca a resposta correta
         const correctText = options[correctIndex];
         const correctBtn = buttons.find(b => b.textContent.includes(correctText));
         if (correctBtn) correctBtn.classList.add('correct');
 
-        feedbackEl.textContent = `Você errou! Resposta correta: ${correctText}`;
+        feedbackEl.textContent = `❌ Você errou! Resposta correta: ${correctText}`;
         feedbackEl.className = "wrong";
       }
 
@@ -129,25 +142,19 @@
     });
 
     async function endGame(){
-      // 🔹 Salva ou atualiza no Supabase
       try {
-        const { data, error } = await db
-          .from('ranking')
-          .upsert(
-            { username: name, score },
-            { onConflict: 'username' } // garante que atualiza caso já exista
-          );
-
-        if (error) console.error('Erro ao salvar pontuação:', error);
+        await db.from('ranking').upsert(
+          { username: name, score },
+          { onConflict: 'username' }
+        );
       } catch (e) {
-        console.error('Falha ao conectar no Supabase', e);
+        console.error('Erro ao salvar no Supabase', e);
       }
 
-      // Mostra resultado e chama ranking
       document.body.innerHTML = `
         <div class="container">
           <header>
-            <div class="brand"><h1>Resultado 🎉</h1></div>
+            <div class="brand"><h1>Resultado</h1></div>
             <div class="sub">Obrigado por jogar, ${name}!</div>
           </header>
           <div class="card row center">
@@ -155,7 +162,7 @@
             <div class="small">Sua pontuação foi salva no ranking.</div>
             <div class="grid-2">
               <a class="btn warn" href="./index.html">Jogar novamente</a>
-              <a class="btn success" href="./ranking.html">Ver Ranking 🏆</a>
+              <a class="btn success" href="./ranking.html">Ver Ranking</a>
             </div>
           </div>
         </div>
