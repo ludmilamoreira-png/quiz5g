@@ -8,6 +8,13 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css">
+  <style>
+    .correct { background: #4caf50; color: #fff; }
+    .wrong { background: #e53935; color: #fff; }
+    #answer-feedback { margin-top: 10px; font-size: 0.95rem; font-weight: 600; }
+    #answer-feedback.correct { color: #4caf50; }
+    #answer-feedback.wrong { color: #e53935; }
+  </style>
 </head>
 <body>
   <div class="container">
@@ -23,6 +30,7 @@
       <div class="progress"><div id="bar"></div></div>
       <div id="question" style="font-size:1.25rem; font-weight:700; margin-top:6px">...</div>
       <div id="options" class="grid-2"></div>
+      <div id="answer-feedback"></div>
       <div class="footer">
         <div class="small" id="status">Pontos: <strong id="points">0</strong></div>
         <button class="btn success" id="next" disabled>Próxima</button>
@@ -57,6 +65,7 @@
     const nextBtn = document.getElementById('next');
     const pointsEl = document.getElementById('points');
     const progressLabel = document.getElementById('progress-label');
+    const feedbackEl = document.getElementById('answer-feedback');
 
     function render() {
       const q = window.QUESTIONS[i];
@@ -65,6 +74,8 @@
       qEl.textContent = q.q;
       nextBtn.disabled = true;
       optsEl.innerHTML = '';
+      feedbackEl.textContent = '';
+      feedbackEl.className = '';
 
       // 🔹 gera opções embaralhadas mantendo referência da correta
       const options = q.options.map((text, idx) => ({
@@ -77,12 +88,12 @@
         const btn = document.createElement('button');
         btn.className = 'option';
         btn.innerHTML = `<span style="opacity:.7">${String.fromCharCode(65+idx)}.</span> ${opt.text}`;
-        btn.onclick = () => check(opt.isCorrect, btn);
+        btn.onclick = () => check(opt.isCorrect, btn, q.a, q.options);
         optsEl.appendChild(btn);
       });
     }
 
-    function check(isCorrect, btn) {
+    function check(isCorrect, btn, correctIndex, options) {
       const buttons = [...document.querySelectorAll('.option')];
       buttons.forEach(b => b.disabled = true);
 
@@ -90,10 +101,18 @@
         btn.classList.add('correct');
         score += 1;
         pointsEl.textContent = score;
+        feedbackEl.textContent = "Resposta correta!";
+        feedbackEl.className = "correct";
       } else {
         btn.classList.add('wrong');
-        // marca a correta
-        buttons.find(b => b.onclick.toString().includes("true"))?.classList.add('correct');
+
+        // 🔹 marca a resposta correta
+        const correctText = options[correctIndex];
+        const correctBtn = buttons.find(b => b.textContent.includes(correctText));
+        if (correctBtn) correctBtn.classList.add('correct');
+
+        feedbackEl.textContent = `Você errou! Resposta correta: ${correctText}`;
+        feedbackEl.className = "wrong";
       }
 
       nextBtn.disabled = false;
