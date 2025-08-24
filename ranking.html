@@ -47,15 +47,19 @@
       border-radius: 0.5rem;
       background: #f9fafb;
       font-weight: 600;
+      color: #fff;
     }
     li:nth-child(1) {
       background: #fde68a;
+      color: #000; /* Primeiro lugar destaque com texto escuro */
     }
     li:nth-child(2) {
       background: #e0f2fe;
+      color: #000;
     }
     li:nth-child(3) {
       background: #dcfce7;
+      color: #000;
     }
     .username {
       text-align: left;
@@ -94,6 +98,44 @@
   <script>
     const db = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
 
+    // Pega username e score da URL (ex: ranking.html?username=Ludmila&score=12)
+    const params = new URLSearchParams(window.location.search);
+    const username = params.get("username");
+    const score = parseInt(params.get("score"), 10);
+
+    async function updateRanking() {
+      if (!username || isNaN(score)) return;
+
+      // Verifica se já existe esse jogador
+      const { data: existing, error: fetchError } = await db
+        .from('ranking')
+        .select('score')
+        .eq('username', username)
+        .single();
+
+      if (fetchError && fetchError.code !== "PGRST116") {
+        console.error("Erro ao buscar usuário:", fetchError);
+        return;
+      }
+
+      // Se já existe e a nova pontuação for menor ou igual, não atualiza
+      if (existing && score <= existing.score) {
+        console.log("Pontuação não melhorou, não será atualizada.");
+        return;
+      }
+
+      // Se não existe, ou se a nova for maior, insere/atualiza
+      const { error: upsertError } = await db
+        .from('ranking')
+        .upsert({ username, score }, { onConflict: ['username'] });
+
+      if (upsertError) {
+        console.error("Erro ao salvar ranking:", upsertError);
+      } else {
+        console.log("Ranking atualizado com sucesso!");
+      }
+    }
+
     async function loadRanking() {
       const { data, error } = await db
         .from('ranking')
@@ -125,7 +167,11 @@
       });
     }
 
-    loadRanking();
+    // Executa: primeiro atualiza, depois carrega
+    (async () => {
+      await updateRanking();
+      await loadRanking();
+    })();
   </script>
 </body>
 </html>
