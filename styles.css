@@ -372,6 +372,6 @@ header {
 #answer-feedback.wrong {
   display: block;
   background: #e53935;   /* Vermelho */
-  color: #fff;           /* Texto branco */
+  color: #ffffff;           /* Texto branco */
   border: 2px solid #b71c1c;
 }
