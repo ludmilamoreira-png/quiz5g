@@ -169,10 +169,13 @@
     }
 
     // Executa: primeiro atualiza, depois carrega
-    (async () => {
-      await updateRanking();
-      await loadRanking();
-    })();
+   (async () => {
+  if (username && !isNaN(score)) {
+    await salvarPontuacao(username, score);
+  }
+  await loadRanking();
+})();
+
   </script>
 </body>
 </html>
